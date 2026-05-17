@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拼单人格测试｜生成专属消费人格海报</title>
+  <!-- 引入CDN资源（确保全球可访问） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+  <!-- Tailwind配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#FF6B6B',
+            secondary: '#FFD166',
+            light: '#FFF9E5',
+            dark: '#2A2A2A'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: #f8f9fa;
+    }
+    .card {
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+      border-radius: 20px;
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #FF6B6B 0%, #FF9F70 100%);
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .question-highlight {
+      background-color: #fff566;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .personality-img {
+      width: 180px;
+      height: 180px;
+      object-fit: contain;
+      border-radius: 20px;
+      margin: 0 auto;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      background-color: #fff;
+      padding: 10px;
+    }
+    /* 海报画布样式 */
+    #poster-canvas {
+      width: 480px;
+      height: 1040px;
+      background: #f5f5f7;
+      border-radius: 20px;
+      padding: 40px;
+      margin: 0 auto;
+      display: none;
+    }
+    .poster-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #ddd;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .poster-slogan {
+      background: #fff;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .poster-tag {
+      background: #e9e9eb;
+      border-radius: 8px;
+      padding: 5px 15px;
+      display: inline-block;
+      margin: 0 5px 10px;
+      font-size: 14px;
+    }
+    .poster-divider {
+      height: 1px;
+      background: #ddd;
+      margin: 20px 0;
+    }
+    /* 适配移动端 */
+    @media (max-width: 640px) {
+      #poster-canvas {
+        width: 100%;
+        height: auto;
+        min-height: 800px;
+        padding: 20px;
+      }
+      .personality-img {
+        width: 150px;
+        height: 150px;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+<div class="max-w-xl mx-auto">
+  <!-- 1. 首页 -->
+  <div id="page1" class="fade-in">
+    <div class="gradient-bg text-white p-8 md:p-10 rounded-3xl card text-center">
+      <h1 class="text-2xl md:text-3xl font-bold mb-4">拼单人格深度测试</h1>
+      <p class="text-white/90 text-lg mb-8">测测你是哪种薅羊毛大神～<br>测试完成可生成专属人格海报</p>
+      <button onclick="startTest()" class="bg-white text-primary font-bold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition">
+        开始测试
+      </button>
+    </div>
+    <!-- 公开网站新增：简单说明 -->
+    <div class="mt-6 bg-white p-4 rounded-xl text-center text-gray-600 text-sm">
+      <p>✨ 所有人均可免费测试 | 无需注册 | 数据仅保存在本地</p>
+    </div>
+  </div>
+
+  <!-- 2. 测试页 -->
+  <div id="page2" class="hidden fade-in">
+    <div class="bg-white p-6 md:p-8 card">
+      <div class="mb-4">
+        <div class="flex justify-between text-sm text-gray-500">
+          <span>进度</span>
+          <span id="progress-text">0/12</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+          <div id="progress-bar" class="bg-primary h-2 rounded-full transition-all" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div id="question-container" class="my-6">
+        <p id="question" class="text-lg md:text-xl text-gray-800"></p>
+      </div>
+
+      <div id="answers" class="space-y-3 mt-6"></div>
+    </div>
+  </div>
+
+  <!-- 3. 结果页（含海报生成） -->
+  <div id="page3" class="hidden fade-in">
+    <div class="bg-white p-6 md:p-8 card text-center">
+      <h2 class="text-xl font-bold text-gray-800 mb-3">你的专属人格是</h2>
+
+      <!-- 人格图片 -->
+      <img id="result-img" class="personality-img mb-4" src="">
+
+      <div id="result-title" class="text-xl md:text-2xl font-bold text-primary mb-2"></div>
+      <div id="result-subtitle" class="text-sm text-gray-500 mb-4"></div>
+
+      <div class="bg-light p-5 rounded-xl text-left text-gray-700 mb-4">
+        <p id="result-desc" class="mb-3"></p>
+        <p id="result-tag" class="font-medium text-primary"></p>
+      </div>
+
+      <!-- 性格标签展示 -->
+      <div id="persona-tags" class="flex flex-wrap justify-center mb-6"></div>
+
+      <!-- 海报操作按钮 -->
+      <button onclick="showPoster()" class="bg-gray-100 text-gray-800 px-6 py-2 rounded-xl font-bold mr-2">
+        <i class="fa fa-picture-o mr-2"></i>生成海报
+      </button>
+      <button onclick="downloadPoster()" id="download-btn" class="hidden bg-primary text-white px-6 py-2 rounded-xl font-bold">
+        <i class="fa fa-download mr-2"></i>下载海报
+      </button>
+      <button onclick="restart()" class="gradient-bg text-white px-6 py-2 rounded-xl font-bold mt-4">
+        重新测试
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. 海报预览页 -->
+  <div id="page4" class="hidden fade-in">
+    <div class="bg-white p-6 md:p-8 card text-center">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">你的专属消费人格海报</h2>
+
+      <!-- 海报画布 -->
+      <div id="poster-canvas" class="card">
+        <div class="text-center mb-4">
+          <div id="poster-icon" class="poster-icon"></div>
+          <p class="text-sm text-gray-500">你的消费人格是</p>
+          <h3 id="poster-name" class="text-2xl font-bold text-gray-900 mb-2"></h3>
+          <p id="poster-subtitle" class="text-sm text-gray-500"></p>
+        </div>
+
+        <div id="poster-slogan" class="poster-slogan text-center font-medium"></div>
+
+        <div class="text-left mb-2">
+          <p class="text-sm text-gray-500">性格标签</p>
+          <div id="poster-tags" class="flex flex-wrap"></div>
+        </div>
+
+        <div class="poster-divider"></div>
+
+        <div id="poster-desc" class="text-gray-700 text-sm leading-relaxed"></div>
+      </div>
+
+      <button onclick="downloadPoster()" class="bg-primary text-white px-6 py-3 rounded-xl font-bold mt-6">
+        <i class="fa fa-download mr-2"></i>下载高清海报
+      </button>
+      <button onclick="backToResult()" class="bg-gray-100 text-gray-800 px-6 py-3 rounded-xl font-bold mt-4">
+        返回结果页
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// 1. 测试题目数据
+const questions = [
+  { text: '看到电商满减活动，你的第一反应是？', options: ['必须冲，拉人也要凑满', '算算怎么最划算', '无所谓，看心情', '不参与，太麻烦', '大家都买我也买', '只买刚需，刚好凑单'] },
+  { text: '为了满减，你愿意凑单没用的东西吗？', options: ['愿意，不薅亏死', '绝对不，只凑精准的', '随便，都行', '绝不，宁可不买', '看别人凑不凑', '刚需才凑，否则不要'] },
+  { text: '拼单时你最在意什么？', options: ['优惠力度越大越好', '绝对不多花一分钱', '别麻烦我就行', '不拼，自己买', '大家都买什么', '性价比和实用性'] },
+  { text: '朋友找你拼单，你会？', options: ['马上答应，还主动拉人', '先算清楚账再说', '可以，但别催我', '直接拒绝', '别人去我就去', '看是不是我需要的'] },
+  { text: '你对拼单群的态度是？', options: ['积极发言，疯狂发车', '只看优惠，算完就走', '静音，偶尔看一眼', '直接退出', '跟着大家上车', '有用就看，没用不理'] },
+  { text: '凑单时你会精确到小数点后两位吗？', options: ['不会，优惠够大就行', '必须，一分钱都不亏', '懒得算', '根本不凑单', '跟着别人走', '会算，但不抠门'] },
+  { text: '拼单失败你会？', options: ['不甘心，继续找人', '无所谓，下次再算', '正好省心', '开心，终于不用拼', '有点失落但算了', '没所谓，刚需才买'] },
+  { text: '你囤货的主要原因是？', options: ['优惠大，不买亏', '便宜，但不乱囤', '从不主动囤货', '完全不囤', '别人都囤', '只囤刚需日用品'] },
+  { text: '拼单最让你难受的是？', options: ['没地方薅羊毛', '算不清楚账', '太麻烦、太折腾', '还要和别人沟通', '错过大家的车', '没有优惠的时候'] },
+  { text: '你觉得拼单的意义是？', options: ['薅到就是赚到', '省钱，精准省钱', '随便参与一下', '毫无意义', '热闹、跟风', '合理利用优惠'] },
+  { text: '看到别人薅到神价，你会？', options: ['羡慕，立刻去抄作业', '冷静，先看值不值', '无所谓', '不关我事', '马上跟风冲', '只看自己需不需要'] },
+  { text: '你最符合下面哪一句？', options: ['满减即信仰，拼单即使命', '一分钱都不能多花', '拼单随缘，麻烦免谈', '宁多花钱，绝不拼单', '别人冲我就冲', '只拼刚需，精明不盲目'] }
+];
+
+// 2. 完整人格数据
+const personalityTypes = [
+  {
+    name: '拼单卷王·薅羊毛战神',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732318824.webp',
+    subtitle: '社交型省钱天花板，拼单狂热分子',
+    slogan: '只要有满减，万物皆可拼，薅羊毛我卷到飞起！',
+    tags: ['组队狂魔', '满减精准拿捏', '薅遍全网羊毛', '拼单发起人'],
+    desc: '买东西必拉人拼单，为凑满减疯狂组队，研究所有优惠规则，谁也别想比我省，薅羊毛行动力拉满，卷死同行购物人。',
+    icon_color: '#ff9500',
+    original_desc: '满减即信仰，拼单即使命，为薅优惠能拉遍所有熟人，哪怕凑单买无用之物也在所不惜，主打一个“不薅到就是亏”。'
+  },
+  {
+    name: '铁公鸡算账大师·精打细算抠神',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732318915.webp',
+    subtitle: '极致理性算账怪，一分钱不白花',
+    slogan: '拼单可以，算账必精，一分钱都别想让我多掏！',
+    tags: ['分毫必较', '货比十家', '拒绝溢价', '抠门但清醒'],
+    desc: '购物前疯狂比价、算折扣、算单价，不该花的钱一分不动，能不买就不买，买必性价比拉满，抠得有理有据。',
+    icon_color: '#34c759',
+    original_desc: '数学天赋全用在拼单算账上，小数点后两位都不含糊，拒绝多花一分冤枉钱，拼单只算“稳赚账”，抠门但有理有据。'
+  },
+  {
+    name: '佛系摆烂选手·随缘躺平派',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732320565.webp',
+    subtitle: '购物随缘，不抢不卷不纠结',
+    slogan: '拼单随缘，麻烦免谈，凑活参与就完事儿～',
+    tags: ['无欲无求', '想买就买', '错过拉倒', '拒绝内卷'],
+    desc: '不研究优惠、不凑满减、不囤货，刷到喜欢就买，没抢到就算了，购物主打一个松弛随缘，绝不内耗。',
+    icon_color: '#5ac8fa',
+    original_desc: '对拼单毫无执念，不主动、不拒绝、不挑剔，嫌麻烦是第一准则，凑单成功与否、东西合不合心意，全看缘分。'
+  },
+  {
+    name: '独行傲娇怪·拒绝拼单洁癖党',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732320866.webp',
+    subtitle: '社交排斥型购物者，讨厌组队麻烦',
+    slogan: '宁当冤大头，不搞拼单凑，独行才最舒心！',
+    tags: ['独来独往', '嫌拼单麻烦', '傲娇独行', '边界感极强'],
+    desc: '极度讨厌拉人拼单、被人蹭单，喜欢自己单独买，嫌社交购物繁琐麻烦，傲娇独立，购物全程一人搞定。',
+    icon_color: '#5856d6',
+    original_desc: '拒绝一切拼单，宁可多花钱也不与人分摊，嫌弃拼单麻烦、扯皮，注重专属感，傲娇又执着，拼单在他这儿就是“禁区”。'
+  },
+  {
+    name: '跟风冲动显眼包·无脑剁手党',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732318914.webp',
+    subtitle: '情绪型购物狂魔，跟风就冲',
+    slogan: '别人拼我就冲，事后拍腿悔无穷，下次还敢！',
+    tags: ['网红跟风', '冲动下单', '无脑剁手', '显眼包式消费'],
+    desc: '别人买啥我买啥，直播间一上头就疯狂下单，不管需不需要，主打一个跟风凑热闹，买完常后悔。',
+    icon_color: '#ff2d55',
+    original_desc: '拼单全看氛围，别人冲他就冲，不看需求、不看品牌，冲动下单后必后悔，却依旧改不了跟风的毛病，主打一个“快乐踩坑”。'
+  },
+  {
+    name: '精明囤货老狐狸·规划型拼单选手',
+    img: 'https://img9.doubanio.com/view/group_topic/l/public/p732320654.webp',
+    subtitle: '长远规划型大佬，理性囤货 + 精准拼单',
+    slogan: '刚需才拼，精准囤货，薅优惠不盲目！',
+    tags: ['深谋远虑', '按需囤货', '理性拼单', '老谋深算'],
+    desc: '提前规划购物清单，只囤刚需，拼单精准不盲目，懂优惠、懂囤货、懂节制，精明又稳，绝不乱花钱。',
+    icon_color: '#ffcc00',
+    original_desc: '不瞎拼、不抠搜，主打精准薅优惠，提前列好购物清单，只拼刚需日用品、零食，适量囤货，会挑时机凑满减，把拼单玩成理财，精明又不贪心。'
+  }
+];
+
+// 全局变量
+let currentQuestion = 0;
+let answers = [];
+let currentPersona = null;
+
+// 3. 测试核心逻辑
+function startTest() {
+  document.getElementById('page1').classList.add('hidden');
+  document.getElementById('page2').classList.remove('hidden');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = questions[currentQuestion];
+  const highlighted = q.text.replace(/(.+)/g, '<span class="question-highlight">$1</span>');
+  document.getElementById('question').innerHTML = highlighted;
+
+  const answersEl = document.getElementById('answers');
+  answersEl.innerHTML = '';
+
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'w-full p-4 border border-gray-200 rounded-xl text-left hover:bg-light hover:border-primary transition';
+    btn.innerText = opt;
+    btn.onclick = () => selectAnswer(i);
+    answersEl.appendChild(btn);
+  });
+
+  updateProgress();
+}
+
+function selectAnswer(index) {
+  answers.push(index);
+  currentQuestion++;
+  if (currentQuestion >= questions.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+function updateProgress() {
+  const percent = (currentQuestion / questions.length) * 100;
+  document.getElementById('progress-bar').style.width = percent + '%';
+  document.getElementById('progress-text').innerText = `${currentQuestion}/${questions.length}`;
+}
+
+// 4. 显示测试结果
+function showResult() {
+  document.getElementById('page2').classList.add('hidden');
+  document.getElementById('page3').classList.remove('hidden');
+
+  // 计算人格类型
+  const freq = Array(6).fill(0);
+  answers.forEach(a => freq[a]++);
+  let max = 0, type = 0;
+  for (let i = 0; i < 6; i++) {
+    if (freq[i] > max) {
+      max = freq[i];
+      type = i;
+    }
+  }
+
+  currentPersona = personalityTypes[type];
+
+  // 填充结果页数据
+  document.getElementById('result-img').src = currentPersona.img;
+  document.getElementById('result-title').innerText = currentPersona.name;
+  document.getElementById('result-subtitle').innerText = currentPersona.subtitle;
+  document.getElementById('result-desc').innerText = currentPersona.original_desc;
+  document.getElementById('result-tag').innerText = currentPersona.slogan;
+
+  // 渲染性格标签
+  const tagsEl = document.getElementById('persona-tags');
+  tagsEl.innerHTML = '';
+  currentPersona.tags.forEach(tag => {
+    const tagEl = document.createElement('span');
+    tagEl.className = 'bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm mr-2 mb-2';
+    tagEl.innerText = tag;
+    tagsEl.appendChild(tagEl);
+  });
+
+  // 显示下载按钮
+  document.getElementById('download-btn').classList.remove('hidden');
+}
+
+// 5. 海报生成逻辑
+function showPoster() {
+  document.getElementById('page3').classList.add('hidden');
+  document.getElementById('page4').classList.remove('hidden');
+  document.getElementById('poster-canvas').style.display = 'block';
+
+  // 填充海报数据
+  document.getElementById('poster-name').innerText = currentPersona.name;
+  document.getElementById('poster-subtitle').innerText = currentPersona.subtitle;
+  document.getElementById('poster-slogan').innerText = currentPersona.slogan;
+  document.getElementById('poster-desc').innerText = currentPersona.desc;
+
+  // 绘制人格图标
+  const iconEl = document.getElementById('poster-icon');
+  iconEl.style.color = currentPersona.icon_color;
+  iconEl.innerHTML = getPersonaIcon(currentPersona.name);
+
+  // 渲染海报标签
+  const posterTagsEl = document.getElementById('poster-tags');
+  posterTagsEl.innerHTML = '';
+  currentPersona.tags.forEach(tag => {
+    const tagEl = document.createElement('span');
+    tagEl.className = 'poster-tag';
+    tagEl.innerText = tag;
+    posterTagsEl.appendChild(tagEl);
+  });
+}
+
+// 根据人格生成对应图标
+function getPersonaIcon(name) {
+  if (name.startsWith('拼单卷王')) return '<i class="fa fa-users fa-2x"></i>';
+  if (name.startsWith('铁公鸡')) return '<i class="fa fa-calculator fa-2x"></i>';
+  if (name.startsWith('佛系')) return '<i class="fa fa-pagelines fa-2x"></i>';
+  if (name.startsWith('独行')) return '<i class="fa fa-times fa-2x"></i>';
+  if (name.startsWith('跟风')) return '<i class="fa fa-arrow-up fa-2x"></i>';
+  return '<i class="fa fa-shopping-basket fa-2x"></i>';
+}
+
+// 下载海报（兼容移动端）
+function downloadPoster() {
+  // 解决移动端下载问题
+  const canvasElement = document.getElementById('poster-canvas');
+
+  html2canvas(canvasElement, {
+    useCORS: true, // 解决跨域图片问题
+    scale: 2, // 提高分辨率
+    logging: false
+  }).then(canvas => {
+    const link = document.createElement('a');
+    // 适配移动端文件名
+    const fileName = encodeURIComponent(currentPersona.name) + '.png';
+    link.download = fileName;
+    link.href = canvas.toDataURL('image/png', 1.0);
+
+    // 兼容移动端点击
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 提示
+    alert('海报已开始下载～');
+  }).catch(err => {
+    console.error('下载失败:', err);
+    alert('海报下载失败，请重试～');
+  });
+}
+
+// 返回结果页
+function backToResult() {
+  document.getElementById('page4').classList.add('hidden');
+  document.getElementById('page3').classList.remove('hidden');
+}
+
+// 重新测试
+function restart() {
+  currentQuestion = 0;
+  answers = [];
+  currentPersona = null;
+  document.getElementById('page3').classList.add('hidden');
+  document.getElementById('page4').classList.add('hidden');
+  document.getElementById('page1').classList.remove('hidden');
+}
+
+// 页面加载完成后初始化
+window.onload = function() {
+  // 确保所有资源加载完成
+  console.log('拼单人格测试网站已加载完成，可正常访问～');
+};
+</script>
+</body>
+</html>
